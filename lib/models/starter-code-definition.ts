@@ -35,6 +35,7 @@ export default class StarterCodeDefinition {
       file_mappings: {
         source: string;
         target: string;
+        should_skip_template_evaluation?: boolean;
       }[];
       template_attributes: {
         required_executable: string;
@@ -50,8 +51,8 @@ export default class StarterCodeDefinition {
       return new StarterCodeDefinition(
         course,
         Language.findBySlug(starterDefinitionYaml.language),
-        starterDefinitionYaml.file_mappings.map((fm: any) => {
-          return new FileMapping(fm.target, fm.source, fm.shouldSkipTemplateEvaluation || false);
+        starterDefinitionYaml.file_mappings.map((fm) => {
+          return new FileMapping(fm.target, fm.source, fm.should_skip_template_evaluation || false);
         }),
         starterDefinitionYaml.template_attributes
       );
@@ -65,13 +66,16 @@ export default class StarterCodeDefinition {
   files(templateDir: string): any[] {
     return this.fileMappings.map((mapping: FileMapping) => {
       const fpath = `${templateDir}/${mapping.templatePath}`;
-      const templateContents = fs.readFileSync(fpath, "utf8");
+      const templateContents = fs.readFileSync(fpath);
 
       Mustache.escape = (text) => text;
 
       return {
+        skippedTemplateInterpolation: mapping.shouldSkipTemplateInterpolation,
         path: mapping.destinationPath,
-        contents: mapping.shouldSkipTemplateInterpolation ? templateContents : Mustache.render(templateContents, this.templateContext()),
+        contents: mapping.shouldSkipTemplateInterpolation
+          ? templateContents
+          : Mustache.render(templateContents.toString("utf-8"), this.templateContext()),
         mode: fs.statSync(fpath).mode,
       };
     });
